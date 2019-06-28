@@ -1,37 +1,5 @@
 # # -*- coding: UTF-8 -*-
-# import socket
-
-# HOST = '127.0.0.1'  # Standard loopback interface address (localhost)
-# PORT = 65432    # Port to listen on (non-privileged ports are > 1023)
-
-# # with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-# #  s.bind((HOST, PORT))
-# #  s.listen()
-# #  conn, addr = s.accept()
-# #  with conn:
-# #   print('Connected by', addr)
-# #   while True:
-# #    data = conn.recv(1024)
-# #    if not data:
-# #     break
-# #    conn.sendall(data)
-# SocketUnloged = []
-# LoginSockets = {}   # {userid: socket_obj}
-
-# def dealWithOneSocket(sock):
-
-# def startDialog(socket1, socket2):
-#    pass
-# def manageOneSocket(sock):
-#    pass
-
-# def run():
-#    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-#    s.bind((HOST, PORT))
-#    s.listen()
-#    connection_status, addr = s.accept()
-#    with connection_status:
-#       
+   
 import socket, threading
 import json
 import ServerDB as sv
@@ -49,6 +17,7 @@ class ClientThread(threading.Thread):
 		self.friendList = {}
 
 	def run(self):
+		global LoginSockets
 		# print ("Connection from : ", clientAddress)
 		#self.csocket.send(bytes("Hi, This is from Server..",'utf-8'))
 		msg = ''
@@ -98,6 +67,7 @@ class ClientThread(threading.Thread):
 				self.sendToSocket("Your command is not correct\n>")
 				continue
 		self.sendToSocket("Disconnected from server")
+		self.csocket.close()
 
 
 	
@@ -124,11 +94,17 @@ class ClientThread(threading.Thread):
 	def SocketIsLogedIn(self):
 		return (self.uid >= 1)
 
-	def checkIfUserLoggedIn(serf, uid):
-		return (not (LoginSockets[uid] == None))
+	def checkStatus(self, msg):
+		if msg['uid'] in LoginSockets.keys():
+			self.sendToSocket("YES")
+		else:
+			self.sendToSocket("NO")
+		
+	# def getSelfUID()
 
 
 	def Login(self, msg):
+		global LoginSockets
 		# if not LoginSockets[]
 		uName, pwd = msg['uName'], msg['pwdHASH']
 		isUser, UID, uName= sv.isUser(uName)
@@ -138,14 +114,18 @@ class ClientThread(threading.Thread):
 				self.uid = UID 
 				self.ifLogedIn = True
 				LoginSockets.update({self.uid : self})
-				self.sendToSocket("OK")
+				print(self.uid)
+				print(self)
+				print(LoginSockets[self.uid])
+				print(self.uid in LoginSockets.keys())
+				self.sendToSocket("('OK', %d)"%UID)
 				# self.checkFriendList()
 				return True
 			else:
-				self.sendToSocket("BAD")
+				self.sendToSocket("('BAD',)")
 				return False
 		else:
-			self.sendToSocket("BAD")
+			self.sendToSocket("('BAD',)")
 			return False
 		# else:
 		# 	self.sendToSocket("ANOTHERLOCATION")
@@ -165,6 +145,7 @@ class ClientThread(threading.Thread):
 
 
 	def logOff(self):
+		global LoginSockets
 		LoginSockets.pop(self.uid)
 		# del self
 
