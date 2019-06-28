@@ -17,9 +17,9 @@ def checkIfUnameOccupied(uname_str):
 	return not len(results) == 0
 	
 def verifyLogin(uname, pwdAES):
-	cursor.execute("select * from users where userName = \'" + uname_str + "\';")
+	cursor.execute("select * from users where userName = \'" + uname + "\';")
 	results = cursor.fetchall()[0]
-	return results[2] == passwd
+	return results[2] == pwdAES
 
 def createUser(uname, pwdAES):
 	# print("we are in")
@@ -32,11 +32,20 @@ def createUser(uname, pwdAES):
 	else:
 		return False;
 
+def getUID(uname):
+	return isUser(uname)[1]
+
+# def getUserName(uid):
+# 	cursor.execute
+
 def isUser(uname):
 	uname = str(uname)
 	rslt = cursor.execute("select * from users where " + ('userID = %s;'  if uname.isdigit() else "userName = \'%s\';")%str(uname)) == 1
-	userID = cursor.fetchone()[0] if rslt else 0
-	return (rslt, userID)
+	ret = (cursor.fetchone())
+	userID, userName = (ret[0], ret[1]) if not ret == None else (None, None)
+	# userID, userName = cursor.fetchone()[0:1] if rslt else 0
+
+	return (rslt, userID, userName)
 	
 def getFriends(user):
 	if isUser(user)[0]:
@@ -48,8 +57,8 @@ def getFriends(user):
 
 
 def makeFriends(user1, user2):
-	rslt1, userID1 = isUser(user1)
-	rslt2, userID2 = isUser(user2)
+	rslt1, userID1, uname1 = isUser(user1)
+	rslt2, userID2, uname2 = isUser(user2)
 	if rslt1 and rslt2 and (not userID2 == userID1):
 		cursor.execute("select friends from users where userID = %s;"%str(userID1))
 		ori_user1_friendList = cursor.fetchone()[0]
@@ -68,5 +77,5 @@ def makeFriends(user1, user2):
 	
 
 if __name__ == '__main__':
-	print(getFriends("1"))
+	print(checkIfUnameOccupied("444"))
 	# print(makeFriends("1", "4"))
