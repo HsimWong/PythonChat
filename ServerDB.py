@@ -4,7 +4,7 @@ import pymysql
 pymysql.install_as_MySQLdb()
 import MySQLdb as sql
 
-db = sql.connect(host = "10.19.43.107",
+db = sql.connect(host = "2001:da8:216:e92f:9863:817d:849c:c75d",
                      user = "hardware",
                      passwd = "Wangxin",
                      db = "Chatroom" )
@@ -77,5 +77,6 @@ def makeFriends(user1, user2):
 	
 
 if __name__ == '__main__':
-	print(checkIfUnameOccupied("444"))
+	# print(checkIfUnameOccupied("444"))
+	print(makeFriends(24, 1))
 	# print(makeFriends("1", "4"))

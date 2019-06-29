@@ -1,5 +1,5 @@
-# # -*- coding: UTF-8 -*-
-   
+# -*- coding: UTF-8 -*-
+#2001:da8:216:e92f:9863:817d:849c:c75d
 import socket, threading
 import json
 import ServerDB as sv
@@ -157,6 +157,8 @@ class ClientThread(threading.Thread):
 			return None
 
 	def makeFriends(self, msg):
+		print(msg)
+		print(self.uid)
 		rslt = sv.makeFriends(self.uid, msg['friend'])
 		self.sendToSocket(("OK" if rslt else "FAILED"))
 
