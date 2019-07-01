@@ -44,7 +44,7 @@ class ClientThread(threading.Thread):
 				self.checkStatus(command)
 				continue
 			elif command['command'] == "searchFriends":
-				self.searchFriends(command)
+				self.searchFriendInfo(command)
 				continue
 			elif command['command'] == "makeFriends":
 				self.makeFriends(command)
@@ -53,28 +53,31 @@ class ClientThread(threading.Thread):
 				self.Chat(command)
 				continue
 			elif command['command'] == "Logoff":
-				self.Logoff(command)
+				self.Logoff()
 				continue
 			elif command['command'] == "CheckFriendList":
-				self.checkFriendList(command)
+				self.checkFriendList()
+				continue
+			elif command['command'] == "CheckIfFriend":
+				self.checkIfFriend()
 				continue
 			elif command['command']	== "Exit":
 				break
 			elif command['command'] == "ifRegisNameValid":
 				self.CheckRegisNameValid(command)
 				continue
+			elif command['command'] == "SwitchToPersonal":
+				continue
+
 			else:
 				self.sendToSocket("Your command is not correct\n>")
 				continue
 		self.sendToSocket("Disconnected from server")
 		self.csocket.close()
 
-
-	
 	def sendToSocket(self, msg_str):
 		self.csocket.send(bytes(msg_str, 'utf-8'))
 		print(msg_str)
-
 
 	def CheckRegisNameValid(self, msg):
 		print("received from client: %s"%msg)
@@ -82,7 +85,6 @@ class ClientThread(threading.Thread):
 			 and (not msg['uname'].isdigit())) else ("NameInvalid" if msg['uname'].isdigit()\
 			  else "NameOccupied"))
 		
-
 	def Register(self, msg):
 		print("StartRegister")
 		#{cmd, uName, pwdHASH}
@@ -95,14 +97,11 @@ class ClientThread(threading.Thread):
 		return (self.uid >= 1)
 
 	def checkStatus(self, msg):
-		if msg['uid'] in LoginSockets.keys():
+		if msg['uid'] in LoginSockets.keys() and LoginSockets[msg['uid']] == self:
 			self.sendToSocket("YES")
 		else:
 			self.sendToSocket("NO")
-		
-	# def getSelfUID()
-
-
+	
 	def Login(self, msg):
 		global LoginSockets
 		# if not LoginSockets[]
@@ -132,28 +131,33 @@ class ClientThread(threading.Thread):
 		# 	return False
 
 	def checkFriendList(self):
+		global LoginSockets
 		friendsID = sv.getFriends(self.uid)
 		ret_dic = {}
 		for friend in friendsID:
-			friendName = sv.isUser(friend)[3]
-			ifOnline = friend
+			friendName = sv.isUser(friend)[2]
+			ifOnline = (friend in LoginSockets.keys())
 			ret_dic.update({friend:(friendName, ifOnline)})
 		self.friendList = ret_dic
-
-
+		self.sendToSocket(str(ret_dic))
 		return ret_dic
 
+	def checkIfFriend(self, msg):
+		friend_id = msg['friend_id']
+		self.sendToSocket("YES" if msg['friend_id'] in self.checkFriendList().keys() else "NO")	
 
 	def logOff(self):
 		global LoginSockets
 		LoginSockets.pop(self.uid)
 		# del self
 
-	def searchFriend(self, msg):
+	def searchFriendInfo(self, msg):
 		rslt, uid, uname = sv.isUser(msg['friend'])
 		if rslt:
+			self.sendToSocket(str((uid, uname, (uid in LoginSockets.keys()))))
 			return [uid, uname]
 		else:
+			self.sendToSocket("(\"This user does not exist\",)")
 			return None
 
 	def makeFriends(self, msg):
@@ -162,10 +166,24 @@ class ClientThread(threading.Thread):
 		rslt = sv.makeFriends(self.uid, msg['friend'])
 		self.sendToSocket(("OK" if rslt else "FAILED"))
 
-	# def ChatToPerson(self, msg): 
-	# 	friend_id = msg['friend']
-	# 	if
+	def checkIfFriendOnline(self, msg):
+		global LoginSockets
+		fri_uid = msg['friend']
+		self.sendToSocket("OK" if fri_uid in LoginSockets.keys() else "NO")
 
+	def ChatToSomeOne(self, raw_msg):
+		if not self.checkStatus():
+			self.sendToSocket("You are not yet logged in.\n")
+			return
+		else:
+			if raw_msg['toChat'] == "YES":
+				global LoginSockets
+				friend_id = int(raw_msg['friend_id'])
+				friend_socket = LoginSockets[friend_id]
+				friend_socket.send(bytes("%s: %s\n"%(friend_id, raw_msg['msg']), 'utf-8'))
+				self.sendToSocket("%s: %s\n"%(friend_id, raw_msg['msg']))
+			else:
+				return
 
 def main():
 	LOCALHOST = "127.0.0.1"

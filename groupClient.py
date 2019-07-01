@@ -5,7 +5,7 @@ class GroupClient:
     def __init__(self):
 
         self.HOST = "127.0.0.1"
-        self.PORT = 3000
+        self.PORT = 12345
         self.BufferSize = 1024
         self.uname = ""
 
@@ -44,4 +44,8 @@ class GroupClient:
             else:
                 self.client.send(msg.encode("utf-8"))
 
+
+if __name__ == '__main__':
+    gc = GroupClient()
+    gc.run()
 

@@ -4,6 +4,7 @@ import time
 import json
 import hashlib
 import groupClient as group 
+from threading import Thread 
 
 REGIS_PORT = 45678
 
@@ -17,6 +18,7 @@ class VerifyClient:
 		self.uid = 0
 		self.uname = ""
 		self.login_status = False
+		self.ready = True 
 
 
 	def sendToServer(self,string):
@@ -31,6 +33,7 @@ class VerifyClient:
 	def register(self):
 		uname = ""
 		pwd = ""
+		self.ready = False
 		while True:
 			uname = input("Please input a user with at least one non-digital character\n>")
 			command = json.dumps({'command':'ifRegisNameValid', 'uname':uname})
@@ -48,9 +51,10 @@ class VerifyClient:
 		regis_status = self.receiveFromServer() == "OK"
 		if regis_status:
 			print("You have successfully registered\n>")
+		self.ready = True
 
 	def login(self):
-		
+		self.ready = False
 		while True:
 			self.uname = input("Please input your username.\n>")
 			pwd = self.getEncrypted(input("Please input your password.\n>"))
@@ -64,23 +68,102 @@ class VerifyClient:
 				break
 			else:
 				continue
+		self.ready = True
 
 	def makeFriend(self,uid):
+		self.ready = False
+		if not self.checkIfLogin():
+			self.login()
 		self.sendToServer(json.dumps({'command':'makeFriends', 'friend':uid}))
 		print(self.receiveFromServer())
+		self.ready = True
 
 	def checkIfLogin(self):
-		print()
+		self.ready = False
 		self.sendToServer(json.dumps({'command':'CheckIfLogIn', 'uid':self.uid})) 
-		return print(self.receiveFromServer() == "YES")
+		return self.receiveFromServer() == "YES"
+		self.ready = True
+
+	def checkIfOtherUserLogin(self, uid):
+		self.sendToServer(json.dumps({'command':'CheckIfLogIn', 'uid':uid})) 
+		return self.receiveFromServer() == "YES"
+
+	def checkOtherUserInfo(self):
+		self.ready = False
+		token = str(input("Please input his/her username or user id:\n> "))
+		self.sendToServer(json.dumps({'command':'searchFriends', 'friend': token}))
+		print("id\t\tUserName\tOnline")
+		dic = eval(self.receiveFromServer())
+		# print(dic)
+		for i in range(3):
+			print(str(dic[i]), end = "\t\t")
+			print(token if i == 2 else "", end = "")
+		print()
+		time.sleep(2)
+		self.ready = True
 
 	def logOff(self):
+		self.ready = False
 		loginStatus = False
 		self.sendToServer(json.dumps({'command':"Exit"}))
+		self.ready = False
 
 	def startGroupChat(self):
+		if not self.checkIfLogin():
+			self.login()
+
 		gc = group.GroupClient()
 		gc.run(self.uname)
+
+	def checkFriendList(self):
+		self.ready = False
+		self.sendToServer(str(json.dumps({'command':'CheckFriendList'})))
+		fri_str = self.receiveFromServer()
+		# print(fri_str)
+		friend_dic = eval(fri_str)
+		for friend in friend_dic.keys():
+			print("Friend ID: %s	Friend Name: %s	Online Status: %s	"%(friend, friend_dic[friend][0], friend_dic[friend][1]))
+		print()
+		
+		return friend_dic
+
+	def checkIfFriend(self, friend_uid):
+		self.sendToServer(json.dumps({'command':'CheckIfFriend', }))
+		self.receiveFromServer()
+
+	def chatToPerson(self, uid):
+		# Check if friend
+		# friend_uid = int(input("Please input the friends' id \n> "))
+		# self.sendToServer(json.dumps({'command':'CheckIfFriend', 'friend_id':uid}))
+		
+		def ChatSending():
+			print("The sending thread initiated...\n> ")
+			while True:
+				msg = input()
+				print("You said:%s"%msg)
+				if not msg == "quit":
+					self.sendToServer(json.dumps({'command': 'ChatToPerson', 'toChat':"YES", 'friend_id':int(uid), 'msg':msg}))
+				else:
+					self.sendToServer(json.dumps({'command': 'ChatToPerson', 'toChat':"NO"}))
+
+		def ChatReceive():
+			print("The receiveing thread initiated...\n> ")
+			while True:
+				print(".", end = "")
+				print(self.receiveFromServer())
+				print("> ")
+		ReceiveThread = Thread(target = ChatReceive).start()
+		SendingThread = Thread(target = ChatSending).start()
+		print("Don't get out")
+
+
+
+
+
+
+
+
+
 		
 
 
@@ -88,13 +171,6 @@ class VerifyClient:
 if __name__ == '__main__':
 	vc = VerifyClient()
 	vc.login()
-	vc.startGroupChat()
-	# vc = VerifyClient()
-	# vc.checkIfLogin()
-	# # vc.login()
-	# vc.checkIfLogin()
-	# vc.makeFriend(22)
-	# vc.checkIfLogin()
-	# vc.logOff()
+	
 	pass
 
